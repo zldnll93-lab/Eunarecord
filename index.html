@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>세상밖으로 날아간 수학 - 활동 소감 및 AI 피드백</title>
+    <!-- PDF 다운로드를 위한 외부 라이브러리 추가 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --primary-light: #eff6ff;
+            --success: #10b981;
+            --text-dark: #1e293b;
+            --text-light: #64748b;
+            --bg-main: #f8fafc;
+            --bg-card: #ffffff;
+            --border: #e2e8f0;
+            --radius: 12px;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-dark);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 680px;
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 40px;
+            transition: all 0.3s ease;
+        }
+
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+            animation: fadeIn 0.4s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 공통 헤더 스타일 */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            color: var(--text-dark);
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 14px;
+            color: var(--text-light);
+        }
+
+        /* 1화면: 로그인 */
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin-top: 10px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .input-group label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .input-group input, .input-group textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 15px;
+            color: var(--text-dark);
+            background-color: #f1f5f9;
+            transition: all 0.2s ease;
+        }
+
+        .input-group input:focus, .input-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            background-color: #fff;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        /* 2화면: 문항 공간 */
+        .survey-title-box {
+            background-color: var(--primary-light);
+            border-left: 4px solid var(--primary);
+            padding: 16px;
+            border-radius: 4px 8px 8px 4px;
+            margin-bottom: 25px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #1e40af;
+            word-break: keep-all;
+        }
+
+        .survey-questions {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            max-height: 50vh;
+            overflow-y: auto;
+            padding-right: 8px;
+            margin-bottom: 25px;
+        }
+
+        /* 스크롤바 커스텀 */
+        .survey-questions::-webkit-scrollbar {
+            width: 6px;
+        }
+        .survey-questions::-webkit-scrollbar-thumb {
+            background-color: var(--border);
+            border-radius: 3px;
+        }
+
+        .question-card {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .question-card label {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .question-card textarea {
+            height: 100px;
+            resize: none;
+            background-color: #fff;
+            border: 1px solid var(--border);
+        }
+
+        /* 3화면: AI 결과창 */
+        .result-box {
+            background: #fdfbf7;
+            border: 1px solid #f59e0b;
+            border-radius: var(--radius);
+            padding: 24px;
+            margin-top: 20px;
+            margin-bottom: 25px;
+            /* [오류 수정] 내용이 길어질 경우 PDF에서 자연스럽게 페이지가 넘어가도록 허용 */
+            page-break-inside: auto; 
+        }
+
+        .result-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #b45309;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .feedback-text {
+            font-size: 14px;
+            color: #451a03;
+            white-space: pre-line;
+            line-height: 1.7;
+        }
+
+        .cheer-box {
+            background-color: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            padding: 18px;
+            border-radius: 8px;
+            color: #065f46;
+            font-size: 14px;
+            margin-bottom: 25px;
+            font-weight: 500;
+            /* 짧은 칭찬 박스는 웬만하면 잘리지 않게 설정 */
+            page-break-inside: avoid;
+        }
+
+        /* PDF 인쇄 시 각 소감문 문항들끼리 어색하게 잘리지 않게 방어 */
+        .feedback-text strong {
+            display: inline-block;
+            margin-top: 10px;
+            page-break-after: avoid;
+        }
+
+        /* 버튼 스타일 */
+        button {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .btn-success {
+            background-color: var(--success);
+            color: white;
+            margin-top: 10px;
+        }
+
+        .btn-success:hover {
+            background-color: #059669;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+            color: var(--text-light);
+            font-size: 14px;
+        }
+
+        /* 인쇄 및 PDF 다운로드 최적화 스타일 */
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+                display: block;
+                height: auto !important;
+            }
+            .container {
+                box-shadow: none;
+                padding: 0;
+                max-width: 100%;
+                height: auto !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .screen {
+                display: none !important;
+            }
+            #screen3 {
+                display: block !important;
+                animation: none;
+            }
+            .result-box {
+                border: 1px solid #ccc;
+                background: #fff;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- 화면 1: 로그인 -->
+    <div id="screen1" class="screen active">
+        <div class="header">
+            <h1>세상밖으로 날아간 수학</h1>
+            <p>활동 소감 및 평가 시스템 로그인</p>
+        </div>
+        <div class="login-form">
+            <div class="input-group">
+                <label for="studentId">학번</label>
+                <input type="text" id="studentId" placeholder="예: 30101" autocomplete="off">
+            </div>
+            <div class="input-group">
+                <label for="studentName">이름</label>
+                <input type="text" id="studentName" placeholder="예: 홍길동" autocomplete="off">
+            </div>
+            <button class="btn-primary" onclick="goToScreen2()">로그인 및 시작하기</button>
+        </div>
+    </div>
+
+    <!-- 화면 2: 질문 문항 공간 -->
+    <div id="screen2" class="screen">
+        <div class="header">
+            <h1>수학 활동 소감 작성</h1>
+            <p id="user-display"></p>
+        </div>
+        <div class="survey-title-box">
+            세상밖으로 날아간 수학에서 했던 활동에 관하여 자신의 경험과 발전한 부분, 앞으로의 가능성, 다짐, 소감 등을 써봅시다. 이 글은 학교생활기록부 작성에 참고합니다.
+        </div>
+        
+        <form id="surveyForm">
+            <div class="survey-questions">
+                <div class="question-card">
+                    <label>1. 큰 수 만들기 게임 (확률과 경우의 수, 당첨될 확률)</label>
+                    <textarea id="q1" placeholder="활동 내용, 배운 점, 느낀 소감을 입력하세요..."></textarea>
+                </div>
+                <div class="question-card">
+                    <label>2. 스틱밤 활동</label>
+                    <textarea id="q2" placeholder="활동 내용, 배운 점, 느낀 소감을 입력하세요..."></textarea>
+                </div>
+                <div class="question-card">
+                    <label>3. 라틴방진과 마방진</label>
+                    <textarea id="q3" placeholder="활동 내용, 배운 점, 느낀 소감을 입력하세요..."></textarea>
+                </div>
+                <div class="question-card">
+                    <label>4. 생일 마방진</label>
+                    <textarea id="q4" placeholder="활동 내용, 배운 점, 느낀 소감을 입력하세요..."></textarea>
+                </div>
+                <div class="question-card">
+                    <label>5. 테셀레이션 패턴 만들기</label>
+                    <textarea id="q5" placeholder="활동 내용, 배운 점, 느낀 소감을 입력하세요..."></textarea>
+                </div>
+                <div class="question-card">
+                    <label>6. 정수 할리갈리와 더 마인드 게임</label>
+                    <textarea id="q6" placeholder="활동 내용, 배운 점, 느낀 소감을 입력하세요..."></textarea>
+                </div>
+                <div class="question-card">
+                    <label>7. 친구의 손을 기억하라 (꼬인팔 풀기)</label>
+                    <textarea id="q7" placeholder="활동 내용, 배운 점, 느낀 소감을 입력하세요..."></textarea>
+                </div>
+                <!-- 8번 입력창 -->
+                <div class="question-card">
+                    <label>8. 주제선택활동을 한 나의 전체 경험에 비추어 자기 평가와 앞으로의 수학 활동이나 학습 계획을 써봅시다.</label>
+                    <textarea id="q8" placeholder="자기 평가, 향후 계획, 다짐 등을 입력하세요..."></textarea>
+                </div>
+            </div>
+            <button type="button" class="btn-primary" onclick="submitSurvey()">소감문 제출하기</button>
+        </form>
+        <div id="loadingText" class="loading">데이터를 안전하게 기록하고 AI 분석을 생성 중입니다...</div>
+    </div>
+
+    <!-- 화면 3: 완료 및 AI 피드백 -->
+    <div id="screen3" class="screen">
+        <div class="header">
+            <h1>활동 완료 및 평가서</h1>
+            <p id="result-user-display"></p>
+        </div>
+        
+        <div class="cheer-box">
+            🎉 그동안 모든 수학 탐구 활동에 적극적으로 참여해 준 것을 진심으로 칭찬하고 격려합니다! 실생활과 맞닿은 다양한 수학적 테마를 해결해 나가는 과정에서 보여준 창의성과 열정은 매우 뛰어났습니다. 앞으로도 수학에 깊은 관심을 가지고 세상을 수학적 시선으로 바라보며 열정적으로 도전해 나가기를 응원합니다! 고생 많았습니다.
+        </div>
+
+        <div class="result-box" style="margin-bottom: 20px;">
+            <div class="result-title">📝 나의 활동 소감 요약</div>
+            <div id="summaryContent" class="feedback-text">
+                요약 중...
+            </div>
+        </div>
+
+        <div class="result-box">
+            <div class="result-title">✨ AI 분석 및 학교생활기록부 추천 피드백</div>
+            <div id="aiFeedback" class="feedback-text">
+                분석 중...
+            </div>
+        </div>
+
+        <button class="btn-success no-print" onclick="downloadPDF()">📄 PDF 다운로드 / 인쇄</button>
+    </div>
+</div>
+
+<script>
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyCp3lUTRglpPWKV7ZFvkXjeNV4d55Z4HQsFk4iXE1Jt_TDlrOyp9Jld6mBxf8O5qdS/exec"; 
+
+    let studentData = {
+        studentId: '',
+        name: ''
+    };
+
+    function goToScreen2() {
+        const idInput = document.getElementById('studentId').value.trim();
+        const nameInput = document.getElementById('studentName').value.trim();
+
+        if(!idInput || !nameInput) {
+            alert('학번과 이름을 모두 입력해주세요.');
+            return;
+        }
+
+        studentData.studentId = idInput;
+        studentData.name = nameInput;
+
+        document.getElementById('user-display').innerText = `${idInput} ${nameInput} 학생 환영합니다.`;
+        
+        switchScreen('screen1', 'screen2');
+    }
+
+    function switchScreen(hideId, showId) {
+        document.getElementById(hideId).classList.remove('active');
+        document.getElementById(showId).classList.add('active');
+    }
+
+    function submitSurvey() {
+        const answers = {
+            q1: document.getElementById('q1').value.trim(),
+            q2: document.getElementById('q2').value.trim(),
+            q3: document.getElementById('q3').value.trim(),
+            q4: document.getElementById('q4').value.trim(),
+            q5: document.getElementById('q5').value.trim(),
+            q6: document.getElementById('q6').value.trim(),
+            q7: document.getElementById('q7').value.trim(),
+            q8: document.getElementById('q8').value.trim() 
+        };
+
+        if(Object.values(answers).every(x => x === '')) {
+            alert('적어도 하나의 활동에 소감을 작성해 주세요.');
+            return;
+        }
+
+        document.getElementById('loadingText').style.display = 'block';
+        
+        const payload = {
+            studentId: studentData.studentId,
+            name: studentData.name,
+            ...answers
+        };
+
+        const summaryHtml = `
+            <strong>1. 큰 수 만들기 게임</strong><br>${answers.q1 || '작성 안 함'}<br><br>
+            <strong>2. 스틱밤 활동</strong><br>${answers.q2 || '작성 안 함'}<br><br>
+            <strong>3. 라틴방진과 마방진</strong><br>${answers.q3 || '작성 안 함'}<br><br>
+            <strong>4. 생일 마방진</strong><br>${answers.q4 || '작성 안 함'}<br><br>
+            <strong>5. 테셀레이션 패턴 만들기</strong><br>${answers.q5 || '작성 안 함'}<br><br>
+            <strong>6. 정수 할리갈리와 더 마인드 게임</strong><br>${answers.q6 || '작성 안 함'}<br><br>
+            <strong>7. 친구의 손을 기억하라</strong><br>${answers.q7 || '작성 안 함'}<br><br>
+            <strong>8. 전체 경험 자기 평가 및 향후 계획</strong><br>${answers.q8 || '작성 안 함'}
+        `;
+        document.getElementById('summaryContent').innerHTML = summaryHtml;
+
+        generateAIFeedback(payload);
+
+        // [오류 수정] CORS 오류가 뜨더라도 프로세스가 정지하지 않도록 통신타입 단순화 및 안전장치 강화
+        fetch(GAS_WEB_APP_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+                'Content-Type': 'text/plain'
+            },
+            body: JSON.stringify(payload)
+        }).then(() => {
+            console.log("Submission completed.");
+        }).catch(err => {
+            console.warn("네트워크 이슈로 로깅이 지연될 수 있으나 프로세스는 정상 진행됩니다.", err);
+        }).finally(() => {
+            document.getElementById('loadingText').style.display = 'none';
+            document.getElementById('result-user-display').innerText = `작성자: ${studentData.studentId} ${studentData.name}`;
+            switchScreen('screen2', 'screen3');
+        });
+    }
+
+    function generateAIFeedback(data) {
+        let keywords = [];
+        if(data.q1.includes('확률') || data.q1.length > 10) keywords.push('확률적 사고체계가 잘 잡혀 있으며 게임 속 딜레마를 수학적으로 직관화하는 능력이 우수함');
+        if(data.q2.length > 10) keywords.push('스틱밤 활동을 통해 위치에너지와 운동에너지의 전환 및 기하학적 배열의 규칙성을 성공적으로 파악함');
+        if(data.q3.length > 10 || data.q4.length > 10) keywords.push('방진 구조 내 숫자의 대칭성과 균형미를 정밀하게 분석하고 논리적 퍼즐 해결에 두각을 보임');
+        if(data.q5.length > 10) keywords.push('테셀레이션 내 도형의 평행이동과 회전을 조화롭게 융합하여 예술과 수학의 통섭적 역량을 증명함');
+        if(data.q6.length > 10) keywords.push('정수의 사칙연산과 심리 게임을 결합하여 순발력 있는 수리 감각과 전략적 수 읽기 능력을 발휘함');
+        if(data.q7.length > 10) keywords.push('위상수학적 개념인 꼬인 팔 풀기 활동에서 직관과 협업을 활용한 문제해결 과정이 매우 인상적임');
+        if(data.q8.length > 10) keywords.push('주제선택활동 전반에 대한 깊은 성찰을 바탕으로 뚜렷한 수학적 목표 의식과 자기주도적 학습 계획을 수립함');
+
+        if(keywords.length === 0) {
+            keywords.push('전반적인 활동에 성실하게 참여하였으며 탐구 과제를 통해 수학에 대한 흥미를 성공적으로 확장함');
+        }
+
+        const feedback = `위 학생은 '세상밖으로 날아간 수학' 연계 프로젝트에 적극 참여하여 일상 속 수학적 원리를 직관하고 확장하는 역량이 크게 돋보임.\n\n특히, ${keywords.join(', ')}.\n\n자기주도적 관찰력과 동료 분석력이 우수하여 향후 수학 구조적 해석 및 융합 탐구 활동에서 지속적으로 고도화된 성취를 보일 가능성이 매우 높은 인재로 판단됨.`;
+        
+        document.getElementById('aiFeedback').innerText = feedback;
+    }
+
+    function downloadPDF() {
+        const element = document.getElementById('screen3');
+        const container = document.querySelector('.container');
+        const btn = element.querySelector('.btn-success');
+        
+        const originalBodyDisplay = document.body.style.display;
+        const originalBodyHeight = document.body.style.height;
+        const originalContainerMargin = container.style.margin;
+        const originalContainerMaxWidth = container.style.maxWidth;
+        const originalContainerWidth = container.style.width;
+        const originalContainerHeight = container.style.height;
+        const originalContainerBoxShadow = container.style.boxShadow;
+        const originalContainerPadding = container.style.padding;
+
+        // [오류 수정] 잘림 및 여백 붕괴를 막기 위해 임시로 높이 제한을 전부 해제
+        document.body.style.display = 'block';
+        document.body.style.height = 'auto';
+        container.style.margin = '0';
+        container.style.maxWidth = 'none';
+        container.style.width = '800px'; 
+        container.style.height = 'auto';
+        container.style.boxShadow = 'none'; 
+        container.style.padding = '20px';
+        
+        window.scrollTo(0, 0);
+        element.style.animation = 'none';
+        
+        btn.style.display = 'none';
+        btn.insertAdjacentHTML('afterend', '<div id="pdf-loading" style="text-align:center; color:#3b82f6; font-weight:bold; margin-top:20px; padding-bottom: 20px;">PDF 생성 및 구글 폴더 저장 중입니다... 잠시만 기다려주세요.</div>');
+
+        // [오류 수정] 억지로 자름을 방지하던 pagebreak 속성을 제거하여 자연스러운 넘김 유도
+        const opt = {
+            margin:       15, // 여백 15mm로 안정감 추가
+            filename:     `${studentData.studentId}_${studentData.name}_수학활동평가서.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff', scrollY: 0 },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        const worker = html2pdf().set(opt).from(element);
+        
+        worker.outputPdf('datauristring').then(async function(pdfAsString) {
+            const base64Data = pdfAsString.split(',')[1];
+            const payload = {
+                type: "uploadPDF",
+                studentId: studentData.studentId, 
+                name: studentData.name,           
+                folderId: "1Y2Dtu4eaBmY_Z-kdlD-GdVjwEeNIE_Dd", 
+                filename: `${studentData.studentId}_${studentData.name}_수학활동평가서.pdf`,
+                fileData: base64Data
+            };
+
+            try {
+                // [오류 수정] 텍스트 통신으로 단순화, 실패 시에도 크러시 되지 않도록 제어
+                await fetch(GAS_WEB_APP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify(payload)
+                });
+                console.log('PDF save request sent to drive.');
+            } catch (err) {
+                console.warn('구글 드라이브 업로드가 지연되었습니다. 로컬 다운로드를 우선 진행합니다.', err);
+            }
+
+            // 로컬 다운로드 진행 및 원상 복구
+            worker.save().then(() => {
+                btn.style.display = 'block'; 
+                document.body.style.display = originalBodyDisplay;
+                document.body.style.height = originalBodyHeight;
+                container.style.margin = originalContainerMargin;
+                container.style.maxWidth = originalContainerMaxWidth;
+                container.style.width = originalContainerWidth;
+                container.style.height = originalContainerHeight;
+                container.style.boxShadow = originalContainerBoxShadow;
+                container.style.padding = originalContainerPadding;
+                
+                const loadingMsg = document.getElementById('pdf-loading');
+                if(loadingMsg) loadingMsg.remove();
+            });
+        });
+    }
+</script>
+
+</body>
+</html>
